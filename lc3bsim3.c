@@ -634,6 +634,7 @@ void eval_micro_sequencer() {
 
 }
 
+int memory_return;
 void memory_logic(){ /* STATES: 33, 28, 29, 25, 16, 17  */
 	int MAR, MAR_0, DATA_SIZE, data, MDR;
    	MAR = CURRENT_LATCHES.MAR;
@@ -643,7 +644,7 @@ void memory_logic(){ /* STATES: 33, 28, 29, 25, 16, 17  */
 	
 	if(!GetR_W(CURRENT_LATCHES.MICROINSTRUCTION)){ /* LOAD/READ 0 */
 		data =  ((MEMORY[MAR>>1][1])<<8) | (MEMORY[MAR>>1][0]);
-		NEXT_LATCHES.MDR = Low16bits(data);
+		memory_return = Low16bits(data);
 	}else{ /* STORE/WRITE 1 */
 		if(DATA_SIZE && !MAR_0){ /* WORD  */
 			MEMORY[MAR>>1][0] = MDR & 0x00FF;
@@ -858,10 +859,16 @@ void latch_datapath_values() {
 		NEXT_LATCHES.MAR = BUS;
 	}
 	if(GetLD_MDR(CURRENT_LATCHES.MICROINSTRUCTION)){
-		if(GetDATA_SIZE(CURRENT_LATCHES.MICROINSTRUCTION)){ /* WORD */
-			NEXT_LATCHES.MDR = BUS;
-		}else{                                  /* BYTE */
-			NEXT_LATCHES.MDR = (BUS & 0x00ff) | ((BUS & 0x00ff)<<8);
+		if(GetMIO_EN(CURRENT_LATCHES.MICROINSTRUCTION)){
+			if(CURRENT_LATCHES.READY){
+				NEXT_LATCHES.MDR = memory_return;
+			}
+		}else{
+			if(GetDATA_SIZE(CURRENT_LATCHES.MICROINSTRUCTION)){ /* WORD */
+				NEXT_LATCHES.MDR = BUS;
+			}else{                                  /* BYTE */
+				NEXT_LATCHES.MDR = (BUS & 0x00ff) | ((BUS & 0x00ff)<<8);
+			}
 		}
 	}		
 	if(GetLD_IR(CURRENT_LATCHES.MICROINSTRUCTION)){
